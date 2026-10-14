@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DevOps Agent — AI Engineering Workspace</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
+          colors: {
+            canvas: '#0b0d12',
+            panel: '#11141b',
+            line: '#252a36',
+            muted: '#8b93a7',
+            accent: '#8b7cff',
+            cyan: '#55d6e8'
+          },
+          boxShadow: {
+            glow: '0 0 45px rgba(139,124,255,.12)',
+            card: '0 12px 40px rgba(0,0,0,.10)'
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    * { scrollbar-width: thin; scrollbar-color: #34394a transparent; }
+    body { min-height: 100vh; }
+    .glass { backdrop-filter: blur(18px); }
+    .bg-grid {
+      background-image: linear-gradient(rgba(139,124,255,.035) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(139,124,255,.035) 1px, transparent 1px);
+      background-size: 34px 34px;
+      mask-image: linear-gradient(to bottom, black, transparent 85%);
+    }
+    .theme-transition, .theme-transition * { transition: background-color .22s ease, border-color .22s ease, color .22s ease; }
+    .nav-item.active { background: rgba(139,124,255,.12); color: #b9b0ff; }
+    .nav-item.active .nav-icon { color: #a79aff; }
+    .suggestion:hover { transform: translateY(-3px); }
+    .suggestion { transition: transform .2s ease, border-color .2s ease, background-color .2s ease; }
+    .message { animation: rise .25s ease both; }
+    @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .dot { animation: pulse 1.2s infinite ease-in-out; }
+    .dot:nth-child(2) { animation-delay: .15s; }
+    .dot:nth-child(3) { animation-delay: .3s; }
+    @keyframes pulse { 0%, 60%, 100% { opacity: .35; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-3px); } }
+    .light-shell { background: #f6f7fb; color: #202333; }
+    .light-shell .sidebar, .light-shell .surface { background: rgba(255,255,255,.92); border-color: #e5e7ef; }
+    .light-shell .main-bg { background: #f8f9fc; }
+    .light-shell .text-main { color: #202333; }
+    .light-shell .text-sub { color: #737b8d; }
+    .light-shell .soft-bg { background: #f2f3f8; }
+    .light-shell .line-color { border-color: #e4e6ee; }
+    .light-shell .input-bg { background: #fff; }
+    .light-shell .nav-item { color: #6c7283; }
+    .light-shell .nav-item.active { background: #efedff; color: #6655db; }
+    .light-shell .nav-item.active .nav-icon { color: #6655db; }
+    .light-shell .muted-panel { background: #fafbfe; border-color: #e8eaf1; }
+    .light-shell .card-hover:hover { background: #f8f7ff; }
+    .light-shell .status-good { background: #e4f8ef; color: #148454; border-color: #c7efdd; }
+    .light-shell .status-running { background: #e8f5ff; color: #1769aa; border-color: #cce9ff; }
+    .light-shell .status-warn { background: #fff5df; color: #a66b08; border-color: #f6e4b7; }
+    .light-shell .status-fail { background: #ffebeb; color: #bd3434; border-color: #ffd2d2; }
+    .light-shell .user-bubble { background: #eeebff; color: #37304f; }
+    .light-shell .assistant-bubble { background: #fff; border-color: #e4e6ee; color: #25283a; }
+    .light-shell .code-bg { background: #f0f1f7; color: #31374a; }
+    .light-shell .ambient { opacity: .16; }
+    .light-shell .divider { border-color: #e5e7ef; }
+  </style>
+</head>
+<body class="theme-transition bg-canvas text-slate-100">
+  <div id="appShell" class="min-h-screen flex">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar w-[258px] shrink-0 border-r border-line bg-[#0e1017] flex flex-col transition-all duration-300 z-30">
+      <div class="h-[72px] flex items-center justify-between px-5 border-b border-line">
+        <a href="#" class="flex items-center gap-3 min-w-0">
+          <span class="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 via-indigo-500 to-cyan-400 flex items-center justify-center shadow-glow shrink-0">
+            <i data-lucide="workflow" class="w-5 h-5 text-white"></i>
+          </span>
+          <span class="sidebar-label min-w-0">
+            <span class="block text-[14px] font-semibold tracking-tight text-main">DevOps Agent</span>
+            <span class="block text-[10px] text-sub tracking-[.16em] uppercase mt-0.5">Engineering workspace</span>
+          </span>
+        </a>
+        <button id="collapseSidebar" aria-label="Collapse sidebar" class="p-2 rounded-lg hover:bg-white/5 text-sub hidden lg:block">
+          <i data-lucide="panel-left-close" class="w-4 h-4"></i>
+        </button>
+        <button id="mobileClose" aria-label="Close sidebar" class="p-2 rounded-lg hover:bg-white/5 text-sub lg:hidden">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="px-3 pt-5">
+        <button id="newChat" class="w-full flex items-center gap-3 rounded-xl px-3.5 py-3 bg-violet-500/10 hover:bg-violet-500/15 border border-violet-400/20 text-violet-200 text-sm font-medium transition">
+          <i data-lucide="square-pen" class="w-4 h-4 shrink-0"></i><span class="sidebar-label">New conversation</span>
+          <span class="sidebar-label ml-auto text-[10px] text-violet-300/60">⌘ K</span>
+        </button>
+        <button id="searchButton" class="w-full mt-2 flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sub hover:text-main hover:bg-white/5 text-sm transition">
+          <i data-lucide="search" class="w-4 h-4 shrink-0"></i><span class="sidebar-label">Search workspace</span>
+          <span class="sidebar-label ml-auto text-[10px] opacity-60">⌘ F</span>
+        </button>
+      </div>
+
+      <nav class="px-3 pt-6">
+        <p class="sidebar-label px-3 mb-2 text-[10px] uppercase tracking-[.18em] font-semibold text-slate-500">Workspace</p>
+        <div class="space-y-1" id="mainNav">
+          <button data-page="Chat" class="nav-item active w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition"><i data-lucide="message-square" class="nav-icon w-4 h-4 shrink-0"></i><span class="sidebar-label">Chat</span></button>
+          <button data-page="Projects" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition"><i data-lucide="folder-kanban" class="nav-icon w-4 h-4 shrink-0"></i><span class="sidebar-label">Projects</span><span class="sidebar-label ml-auto text-[10px] text-sub">04</span></button>
+          <button data-page="Pipelines" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition"><i data-lucide="git-branch" class="nav-icon w-4 h-4 shrink-0"></i><span class="sidebar-label">Pipelines</span><span class="sidebar-label ml-auto w-1.5 h-1.5 rounded-full bg-emerald-400"></span></button>
+          <button data-page="Infrastructure" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition"><i data-lucide="cloud" class="nav-icon w-4 h-4 shrink-0"></i><span class="sidebar-label">Infrastructure</span></button>
+          <button data-page="Kubernetes" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition"><i data-lucide="boxes" class="nav-icon w-4 h-4 shrink-0"></i><span class="sidebar-label">Kubernetes</span></button>
+          <button data-page="Containers" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition"><i data-lucide="container" class="nav-icon w-4 h-4 shrink-0"></i><span class="sidebar-label">Docker & Containers</span></button>
+          <button data-page="Monitoring" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition"><i data-lucide="activity" class="nav-icon w-4 h-4 shrink-0"></i><span class="sidebar-label">Monitoring</span></button>
+          <button data-page="Security" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition"><i data-lucide="shield-check" class="nav-icon w-4 h-4 shrink-0"></i><span class="sidebar-label">Security</span></button>
+        </div>
+      </nav>
+
+      <div class="px-3 pt-7 flex-1 min-h-0 overflow-y-auto">
+        <div class="sidebar-label flex items-center justify-between px-3 mb-2">
+          <p class="text-[10px] uppercase tracking-[.18em] font-semibold text-slate-500">Recent conversations</p>
+          <button class="text-slate-500 hover:text-main" aria-label="More conversation options"><i data-lucide="ellipsis" class="w-4 h-4"></i></button>
+        </div>
+        <div id="historyList" class="space-y-1">
+          <button class="history-item w-full text-left px-3 py-2.5 rounded-lg text-[12px] text-sub hover:text-main hover:bg-white/5 truncate" data-prompt="Help me debug a failed GitHub Actions pipeline">Fix GitHub Actions pipeline</button>
+          <button class="history-item w-full text-left px-3 py-2.5 rounded-lg text-[12px] text-sub hover:text-main hover:bg-white/5 truncate" data-prompt="Help me troubleshoot a Kubernetes pod in CrashLoopBackOff">Troubleshoot CrashLoopBackOff</button>
+          <button class="history-item w-full text-left px-3 py-2.5 rounded-lg text-[12px] text-sub hover:text-main hover:bg-white/5 truncate" data-prompt="Review my Terraform infrastructure configuration">Review Terraform configuration</button>
+          <button class="history-item w-full text-left px-3 py-2.5 rounded-lg text-[12px] text-sub hover:text-main hover:bg-white/5 truncate" data-prompt="How can I optimize my Docker image build?">Optimize Docker image build</button>
+        </div>
+      </div>
+
+      <div class="p-3 border-t border-line">
+        <button data-page="Settings" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sub hover:text-main hover:bg-white/5 transition"><i data-lucide="settings-2" class="nav-icon w-4 h-4 shrink-0"></i><span class="sidebar-label">Settings</span></button>
+        <div class="mt-2 flex items-center gap-3 p-2 rounded-xl hover:bg-white/5">
+          <div class="w-8 h-8 shrink-0 rounded-full bg-gradient-to-br from-indigo-400 to-fuchsia-500 flex items-center justify-center text-[11px] font-bold text-white">DE</div>
+          <div class="sidebar-label flex-1 min-w-0"><p class="text-xs font-medium text-main">Dev Engineer</p><p class="text-[10px] text-sub mt-0.5">Personal workspace</p></div>
+          <button id="profileMenu" aria-label="Profile menu" class="sidebar-label text-sub hover:text-main"><i data-lucide="ellipsis" class="w-4 h-4"></i></button>
+        </div>
+      </div>
+    </aside>
+
+    <div id="mobileBackdrop" class="fixed inset-0 bg-black/60 z-20 hidden lg:hidden"></div>
+
+    <!-- Main -->
+    <main class="main-bg relative flex-1 min-w-0 bg-[#0b0d12] overflow-hidden">
+      <div class="bg-grid ambient pointer-events-none absolute inset-0"></div>
+      <div class="ambient pointer-events-none absolute -top-40 left-[25%] w-[500px] h-[500px] rounded-full bg-violet-600/10 blur-[120px]"></div>
+      <div class="ambient pointer-events-none absolute top-[35%] right-[-150px] w-[380px] h-[380px] rounded-full bg-cyan-500/[.06] blur-[120px]"></div>
+
+      <header class="relative z-10 h-[72px] border-b border-line/80 flex items-center justify-between px-4 sm:px-7">
+        <div class="flex items-center gap-3 min-w-0">
+          <button id="mobileOpen" class="lg:hidden p-2 -ml-2 rounded-lg hover:bg-white/5 text-sub" aria-label="Open menu"><i data-lucide="menu" class="w-5 h-5"></i></button>
+          <div class="flex items-center gap-2 text-sm">
+            <span class="text-sub hidden sm:inline">Workspace</span><i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-600 hidden sm:inline"></i>
+            <span id="pageTitle" class="font-medium text-main">AI Assistant</span>
+            <span class="hidden sm:inline-flex items-center gap-1.5 ml-2 px-2 py-1 rounded-md border border-emerald-400/20 bg-emerald-400/[.07] text-emerald-300 text-[10px]"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Demo mode</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 sm:gap-3">
+          <button id="environmentButton" class="hidden sm:flex items-center gap-2 rounded-lg border border-line px-3 py-2 text-xs text-sub hover:text-main hover:border-slate-500 transition"><span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span><span id="environmentLabel">Development</span><i data-lucide="chevron-down" class="w-3 h-3"></i></button>
+          <button id="themeToggle" aria-label="Toggle light and dark theme" class="w-9 h-9 flex items-center justify-center rounded-lg border border-line text-sub hover:text-main hover:bg-white/5 transition"><i id="themeIcon" data-lucide="sun" class="w-4 h-4"></i></button>
+          <button id="contextToggle" aria-label="Toggle context panel" class="hidden md:flex w-9 h-9 items-center justify-center rounded-lg border border-line text-sub hover:text-main hover:bg-white/5 transition"><i data-lucide="panel-right" class="w-4 h-4"></i></button>
+        </div>
+      </header>
+
+      <div class="relative z-10 h-[calc(100vh-72px)] flex">
+        <section class="flex-1 min-w-0 overflow-y-auto" id="workspace">
+          <!-- Chat landing -->
+          <div id="chatLanding" class="max-w-[1000px] mx-auto px-4 sm:px-8 pt-12 sm:pt-[7vh] pb-8">
+            <div class="text-center">
+              <div class="relative inline-flex mb-6">
+                <div class="absolute inset-0 rounded-2xl bg-violet-500/30 blur-xl"></div>
+                <div class="relative w-14 h-14 rounded-2xl border border-violet-300/20 bg-gradient-to-br from-violet-500/20 to-cyan-500/10 flex items-center justify-center shadow-glow">
+                  <i data-lucide="workflow" class="w-7 h-7 text-violet-300"></i>
+                </div>
+                <span class="absolute -right-1 -bottom-1 w-4 h-4 rounded-full bg-emerald-400 border-[3px] border-[#0b0d12]"></span>
+              </div>
+              <p class="text-[11px] uppercase tracking-[.25em] text-violet-300 font-semibold mb-3">Your intelligent engineering copilot</p>
+              <h1 class="text-main text-3xl sm:text-[42px] leading-tight tracking-[-.045em] font-semibold">Your DevOps AI Workspace</h1>
+              <p class="text-sub text-sm sm:text-base mt-4 max-w-xl mx-auto leading-7">Build, deploy, debug, and manage infrastructure with an AI engineering assistant.</p>
+            </div>
+
+            <div class="mt-9 max-w-[780px] mx-auto">
+              <form id="promptForm" class="surface relative rounded-2xl border border-[#303344] bg-[#12151e]/95 shadow-glow p-3 focus-within:border-violet-400/60 transition">
+                <textarea id="promptInput" rows="2" class="w-full resize-none bg-transparent outline-none text-main placeholder:text-slate-500 text-sm leading-6 px-2 py-2" placeholder="Ask your DevOps Agent anything..."></textarea>
+                <div class="flex items-center justify-between px-1 pt-2">
+                  <div class="flex items-center gap-1.5">
+                    <button type="button" id="attachButton" class="p-2 rounded-lg text-sub hover:text-main hover:bg-white/5 transition" title="Attach a file"><i data-lucide="paperclip" class="w-4 h-4"></i></button>
+                    <input id="fileInput" type="file" class="hidden" />
+                    <span id="attachmentName" class="text-[11px] text-cyan-300 hidden max-w-[140px] truncate"></span>
+                    <button type="button" id="modelButton" class="flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-[11px] text-sub hover:text-main hover:bg-white/5 transition"><i data-lucide="sparkles" class="w-3.5 h-3.5 text-violet-300"></i> DevOps Copilot <i data-lucide="chevron-down" class="w-3 h-3"></i></button>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <span class="hidden sm:inline text-[10px] text-slate-600">Shift + Enter for new line</span>
+                    <button type="submit" class="w-9 h-9 rounded-xl bg-violet-500 hover:bg-violet-400 text-white flex items-center justify-center shadow-lg shadow-violet-500/20 transition" aria-label="Send prompt"><i data-lucide="arrow-up" class="w-4 h-4"></i></button>
+                  </div>
+                </div>
+              </form>
+              <div class="flex items-center justify-center gap-2 mt-3 text-[10px] text-slate-500"><i data-lucide="shield-check" class="w-3 h-3"></i> Demo environment · No real infrastructure is connected</div>
+            </div>
+
+            <div class="mt-10">
+              <div class="flex items-center justify-between mb-4">
+                <h2 class="text-[11px] uppercase tracking-[.16em] font-semibold text-sub">Start with a task</h2>
+                <span class="text-[10px] text-slate-500">SUGGESTED PROMPTS</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button class="suggestion surface card-hover text-left rounded-xl border border-line bg-[#11141b]/80 p-4 group" data-prompt="Help me debug a failed CI/CD pipeline. Show me a systematic troubleshooting checklist.">
+                  <div class="flex items-start justify-between"><span class="w-9 h-9 rounded-lg bg-violet-500/10 border border-violet-400/10 flex items-center justify-center"><i data-lucide="git-branch" class="w-4 h-4 text-violet-300"></i></span><i data-lucide="arrow-up-right" class="w-4 h-4 text-slate-600 group-hover:text-violet-300 transition"></i></div>
+                  <h3 class="text-main text-sm font-medium mt-4">CI/CD Pipeline Assistant</h3><p class="text-sub text-xs leading-5 mt-1.5">Debug builds, test failures, and deployment workflows.</p>
+                </button>
+                <button class="suggestion surface card-hover text-left rounded-xl border border-line bg-[#11141b]/80 p-4 group" data-prompt="Review my AWS infrastructure design and suggest a secure, cost-conscious architecture.">
+                  <div class="flex items-start justify-between"><span class="w-9 h-9 rounded-lg bg-cyan-500/10 border border-cyan-400/10 flex items-center justify-center"><i data-lucide="cloud" class="w-4 h-4 text-cyan-300"></i></span><i data-lucide="arrow-up-right" class="w-4 h-4 text-slate-600 group-hover:text-cyan-300 transition"></i></div>
+                  <h3 class="text-main text-sm font-medium mt-4">AWS Infrastructure</h3><p class="text-sub text-xs leading-5 mt-1.5">Plan cloud resources, networking, and Terraform changes.</p>
+                </button>
+                <button class="suggestion surface card-hover text-left rounded-xl border border-line bg-[#11141b]/80 p-4 group" data-prompt="A Kubernetes pod is in CrashLoopBackOff. Give me a step-by-step diagnostic workflow and example kubectl commands.">
+                  <div class="flex items-start justify-between"><span class="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-400/10 flex items-center justify-center"><i data-lucide="boxes" class="w-4 h-4 text-blue-300"></i></span><i data-lucide="arrow-up-right" class="w-4 h-4 text-slate-600 group-hover:text-blue-300 transition"></i></div>
+                  <h3 class="text-main text-sm font-medium mt-4">Kubernetes Troubleshooting</h3><p class="text-sub text-xs leading-5 mt-1.5">Investigate pod health, events, logs, and deployments.</p>
+                </button>
+                <button class="suggestion surface card-hover text-left rounded-xl border border-line bg-[#11141b]/80 p-4 group" data-prompt="Review this Dockerfile for security, caching, and image-size improvements. Explain the recommended changes.">
+                  <div class="flex items-start justify-between"><span class="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-400/10 flex items-center justify-center"><i data-lucide="container" class="w-4 h-4 text-emerald-300"></i></span><i data-lucide="arrow-up-right" class="w-4 h-4 text-slate-600 group-hover:text-emerald-300 transition"></i></div>
+                  <h3 class="text-main text-sm font-medium mt-4">Docker & Containers</h3><p class="text-sub text-xs leading-5 mt-1.5">Improve image builds, runtime configuration, and security.</p>
+                </button>
+              </div>
+            </div>
+
+            <!-- Dashboard overview -->
+            <div class="mt-10">
+              <div class="flex items-center justify-between mb-4">
+                <div><h2 class="text-main text-sm font-semibold">Workspace overview</h2><p class="text-sub text-xs mt-1">A snapshot of your engineering environment</p></div>
+                <span class="text-[10px] text-slate-500 border border-line rounded-md px-2 py-1">SAMPLE DATA</span>
+              </div>
+              <div class="grid grid-cols-2 xl:grid-cols-4 gap-3">
+                <div class="surface rounded-xl border border-line bg-[#11141b]/80 p-4"><div class="flex items-center justify-between"><span class="text-sub text-xs">Pipelines</span><i data-lucide="git-branch" class="w-4 h-4 text-violet-300"></i></div><div class="flex items-end gap-2 mt-3"><span class="text-main text-2xl font-semibold">08</span><span class="text-emerald-400 text-[10px] mb-1">↗ 2 this week</span></div><div class="h-1 rounded-full bg-white/5 mt-3 overflow-hidden"><div class="h-full w-[78%] bg-violet-400 rounded-full"></div></div></div>
+                <div class="surface rounded-xl border border-line bg-[#11141b]/80 p-4"><div class="flex items-center justify-between"><span class="text-sub text-xs">Build success</span><i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-300"></i></div><div class="flex items-end gap-2 mt-3"><span class="text-main text-2xl font-semibold">96.8%</span></div><div class="h-1 rounded-full bg-white/5 mt-3 overflow-hidden"><div class="h-full w-[96.8%] bg-emerald-400 rounded-full"></div></div></div>
+                <div class="surface rounded-xl border border-line bg-[#11141b]/80 p-4"><div class="flex items-center justify-between"><span class="text-sub text-xs">Cloud resources</span><i data-lucide="cloud" class="w-4 h-4 text-cyan-300"></i></div><div class="flex items-end gap-2 mt-3"><span class="text-main text-2xl font-semibold">24</span><span class="text-sub text-[10px] mb-1">across 2 regions</span></div><div class="flex gap-1 mt-3"><span class="h-1 flex-1 rounded-full bg-cyan-400"></span><span class="h-1 flex-1 rounded-full bg-cyan-400/70"></span><span class="h-1 flex-1 rounded-full bg-cyan-400/40"></span><span class="h-1 flex-1 rounded-full bg-white/5"></span></div></div>
+                <div class="surface rounded-xl border border-line bg-[#11141b]/80 p-4"><div class="flex items-center justify-between"><span class="text-sub text-xs">Open alerts</span><i data-lucide="bell-ring" class="w-4 h-4 text-amber-300"></i></div><div class="flex items-end gap-2 mt-3"><span class="text-main text-2xl font-semibold">03</span><span class="text-amber-300 text-[10px] mb-1">Needs review</span></div><div class="flex gap-1 mt-3"><span class="h-1 w-1/3 rounded-full bg-amber-400"></span><span class="h-1 w-1/3 rounded-full bg-amber-400/40"></span><span class="h-1 w-1/3 rounded-full bg-white/5"></span></div></div>
+              </div>
+            </div>
+
+            <div class="mt-8 grid grid-cols-1 lg:grid-cols-[1.25fr_.75fr] gap-4">
+              <div class="surface rounded-xl border border-line bg-[#11141b]/80 p-5">
+                <div class="flex items-center justify-between"><div><h3 class="text-main text-sm font-semibold">Latest pipeline run</h3><p class="text-sub text-xs mt-1">shopping-cart-api · main</p></div><span class="status-good inline-flex items-center gap-1.5 text-[10px] px-2 py-1 rounded-md border border-emerald-400/20 bg-emerald-400/[.07] text-emerald-300"><i data-lucide="check-circle-2" class="w-3 h-3"></i> Success</span></div>
+                <div class="grid grid-cols-4 gap-2 mt-6">
+                  <div><div class="flex items-center gap-1.5 text-[10px] text-emerald-300"><i data-lucide="check-circle-2" class="w-3 h-3"></i>Source</div><div class="h-1 rounded-full bg-emerald-400 mt-2"></div><p class="text-[10px] text-sub mt-2">12 sec</p></div>
+                  <div><div class="flex items-center gap-1.5 text-[10px] text-emerald-300"><i data-lucide="check-circle-2" class="w-3 h-3"></i>Build</div><div class="h-1 rounded-full bg-emerald-400 mt-2"></div><p class="text-[10px] text-sub mt-2">1m 24s</p></div>
+                  <div><div class="flex items-center gap-1.5 text-[10px] text-emerald-300"><i data-lucide="check-circle-2" class="w-3 h-3"></i>Test</div><div class="h-1 rounded-full bg-emerald-400 mt-2"></div><p class="text-[10px] text-sub mt-2">48 sec</p></div>
+                  <div><div class="flex items-center gap-1.5 text-[10px] text-emerald-300"><i data-lucide="check-circle-2" class="w-3 h-3"></i>Deploy</div><div class="h-1 rounded-full bg-emerald-400 mt-2"></div><p class="text-[10px] text-sub mt-2">2m 10s</p></div>
+                </div>
+                <div class="mt-5 pt-4 border-t border-line flex flex-wrap gap-x-5 gap-y-2 text-[10px] text-sub"><span class="flex items-center gap-1.5"><i data-lucide="clock-3" class="w-3 h-3"></i> 4m 34s total</span><span class="flex items-center gap-1.5"><i data-lucide="git-commit" class="w-3 h-3"></i> 7fd2a91</span><span class="flex items-center gap-1.5"><i data-lucide="user-round" class="w-3 h-3"></i> dev-engineer</span></div>
+              </div>
+              <div class="surface rounded-xl border border-line bg-[#11141b]/80 p-5">
+                <div class="flex items-center justify-between"><h3 class="text-main text-sm font-semibold">Recent activity</h3><button class="text-[10px] text-violet-300 hover:text-violet-200">View all</button></div>
+                <div class="mt-4 space-y-4">
+                  <div class="flex gap-3"><span class="w-7 h-7 rounded-lg bg-emerald-400/10 flex items-center justify-center shrink-0"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-300"></i></span><div class="min-w-0"><p class="text-main text-xs">Build completed</p><p class="text-sub text-[10px] mt-1">shopping-cart-api · 8 min ago</p></div></div>
+                  <div class="flex gap-3"><span class="w-7 h-7 rounded-lg bg-violet-400/10 flex items-center justify-center shrink-0"><i data-lucide="container" class="w-3.5 h-3.5 text-violet-300"></i></span><div class="min-w-0"><p class="text-main text-xs">Container image created</p><p class="text-sub text-[10px] mt-1">web-app:v1.8.2 · 22 min ago</p></div></div>
+                  <div class="flex gap-3"><span class="w-7 h-7 rounded-lg bg-amber-400/10 flex items-center justify-center shrink-0"><i data-lucide="shield-alert" class="w-3.5 h-3.5 text-amber-300"></i></span><div class="min-w-0"><p class="text-main text-xs">Security review pending</p><p class="text-sub text-[10px] mt-1">staging environment · 35 min ago</p></div></div>
+                </div>
+              </div>
+            </div>
+            <p class="text-center text-[10px] text-slate-600 mt-8">Illustrative dashboard data · No real cloud resources or AI services are connected.</p>
+          </div>
+
+          <!-- Conversation -->
+          <div id="chatConversation" class="hidden max-w-[850px] mx-auto px-4 sm:px-8 pt-8 pb-10">
+            <div id="messages" class="space-y-6"></div>
+            <form id="conversationForm" class="surface sticky bottom-4 mt-8 rounded-2xl border border-line bg-[#12151e]/95 p-3 shadow-glow">
+              <textarea id="conversationInput" rows="2" class="w-full resize-none bg-transparent outline-none text-main placeholder:text-slate-500 text-sm leading-6 px-2 py-2" placeholder="Continue the conversation..."></textarea>
+              <div class="flex justify-between items-center pt-2 px-1"><span class="text-[10px] text-sub">Demo mode · Simulated responses</span><button type="submit" class="w-9 h-9 rounded-xl bg-violet-500 hover:bg-violet-400 text-white flex items-center justify-center transition"><i data-lucide="arrow-up" class="w-4 h-4"></i></button></div>
+            </form>
+          </div>
+
+          <!-- Other page content -->
+          <div id="genericPage" class="hidden max-w-[1100px] mx-auto px-4 sm:px-8 py-8">
+            <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-7">
+              <div><p class="text-[11px] uppercase tracking-[.2em] text-violet-300 font-semibold mb-2">DevOps workspace</p><h1 id="genericTitle" class="text-main text-3xl font-semibold tracking-tight">Projects</h1><p id="genericSubtitle" class="text-sub text-sm mt-2">Manage your engineering workspace.</p></div>
+              <div class="flex gap-2"><div class="relative"><i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i><input id="tableSearch" class="input-bg bg-[#12151e] border border-line rounded-lg pl-9 pr-3 py-2.5 text-xs text-main outline-none focus:border-violet-400/50 w-full sm:w-52" placeholder="Search items..." /></div><button id="genericAction" class="inline-flex items-center gap-2 rounded-lg bg-violet-500 hover:bg-violet-400 px-3 py-2.5 text-xs text-white font-medium transition"><i data-lucide="plus" class="w-3.5 h-3.5"></i><span>New item</span></button></div>
+            </div>
+            <div id="genericStats" class="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-6"></div>
+            <div class="surface rounded-xl border border-line bg-[#11141b]/80 overflow-hidden">
+              <div class="flex items-center justify-between p-5 border-b border-line"><div><h2 id="tableHeading" class="text-main text-sm font-semibold">Overview</h2><p class="text-sub text-xs mt-1">Sample data for UI preview</p></div><button id="filterButton" class="flex items-center gap-2 border border-line rounded-lg px-3 py-2 text-xs text-sub hover:text-main"><i data-lucide="list-filter" class="w-3.5 h-3.5"></i> Filters</button></div>
+              <div class="overflow-x-auto"><table class="w-full text-left min-w-[650px]"><thead id="genericHead" class="bg-white/[.02] text-[10px] uppercase tracking-wider text-sub"></thead><tbody id="genericBody" class="divide-y divide-[#252a36]"></tbody></table></div>
+              <div id="tableEmpty" class="hidden text-center py-12 text-sub text-sm">No matching items found.</div>
+              <div class="p-4 border-t border-line flex items-center justify-between text-[10px] text-sub"><span id="tableCount">Showing sample records</span><span>Demo data only</span></div>
+            </div>
+            <p class="text-center text-[10px] text-slate-600 mt-6">Illustrative data only. This UI is not connected to AWS, Kubernetes, GitHub, or monitoring services.</p>
+          </div>
+        </section>
+
+        <!-- Context panel -->
+        <aside id="contextPanel" class="hidden xl:block w-[300px] shrink-0 border-l border-line bg-[#0e1017]/80 overflow-y-auto">
+          <div class="p-5 border-b border-line flex items-center justify-between"><div><h2 class="text-main text-sm font-semibold">Context panel</h2><p class="text-sub text-[10px] mt-1">Project environment</p></div><button id="contextClose" class="p-1.5 rounded-md hover:bg-white/5 text-sub" aria-label="Close context panel"><i data-lucide="panel-right-close" class="w-4 h-4"></i></button></div>
+          <div class="p-4 space-y-5">
+            <div><div class="flex items-center justify-between mb-3"><h3 class="text-[10px] uppercase tracking-[.15em] text-sub font-semibold">Active project</h3><i data-lucide="folder-git-2" class="w-3.5 h-3.5 text-violet-300"></i></div><div class="muted-panel border border-line rounded-xl p-3 bg-[#12151e]"><div class="flex items-center gap-2"><span class="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center"><i data-lucide="layers-3" class="w-4 h-4 text-violet-300"></i></span><div><p class="text-main text-xs font-medium">shopping-cart-api</p><p class="text-sub text-[10px] mt-1">Backend service</p></div></div><div class="mt-3 pt-3 border-t border-line space-y-2 text-[10px]"><div class="flex justify-between"><span class="text-sub">Branch</span><span class="text-main font-mono">main</span></div><div class="flex justify-between"><span class="text-sub">Last commit</span><span class="text-main font-mono">7fd2a91</span></div><div class="flex justify-between"><span class="text-sub">Language</span><span class="text-main">TypeScript</span></div></div></div></div>
+            <div><h3 class="text-[10px] uppercase tracking-[.15em] text-sub font-semibold mb-3">Pipeline stages</h3><div class="space-y-2"><div class="flex items-center gap-3"><span class="w-7 h-7 rounded-lg bg-emerald-400/10 flex items-center justify-center"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-300"></i></span><div class="flex-1"><p class="text-main text-xs">Build</p><p class="text-sub text-[10px] mt-0.5">Completed · 1m 24s</p></div><span class="w-1.5 h-1.5 bg-emerald-400 rounded-full"></span></div><div class="flex items-center gap-3"><span class="w-7 h-7 rounded-lg bg-emerald-400/10 flex items-center justify-center"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-300"></i></span><div class="flex-1"><p class="text-main text-xs">Tests</p><p class="text-sub text-[10px] mt-0.5">Passed · 48 sec</p></div><span class="w-1.5 h-1.5 bg-emerald-400 rounded-full"></span></div><div class="flex items-center gap-3"><span class="w-7 h-7 rounded-lg bg-amber-400/10 flex items-center justify-center"><i data-lucide="clock-3" class="w-3.5 h-3.5 text-amber-300"></i></span><div class="flex-1"><p class="text-main text-xs">Deploy</p><p class="text-sub text-[10px] mt-0.5">Awaiting approval</p></div><span class="w-1.5 h-1.5 bg-amber-400 rounded-full"></span></div></div></div>
+            <div><div class="flex items-center justify-between mb-3"><h3 class="text-[10px] uppercase tracking-[.15em] text-sub font-semibold">Infrastructure</h3><span class="text-[9px] text-slate-500">SAMPLE</span></div><div class="space-y-2"><div class="muted-panel flex items-center justify-between rounded-lg border border-line bg-[#12151e] p-3"><div class="flex items-center gap-2"><i data-lucide="server" class="w-4 h-4 text-cyan-300"></i><span class="text-xs text-main">EC2 instances</span></div><span class="text-xs text-main font-medium">06</span></div><div class="muted-panel flex items-center justify-between rounded-lg border border-line bg-[#12151e] p-3"><div class="flex items-center gap-2"><i data-lucide="boxes" class="w-4 h-4 text-violet-300"></i><span class="text-xs text-main">EKS clusters</span></div><span class="text-xs text-main font-medium">02</span></div><div class="muted-panel flex items-center justify-between rounded-lg border border-line bg-[#12151e] p-3"><div class="flex items-center gap-2"><i data-lucide="database" class="w-4 h-4 text-emerald-300"></i><span class="text-xs text-main">S3 buckets</span></div><span class="text-xs text-main font-medium">08</span></div><div class="muted-panel flex items-center justify-between rounded-lg border border-line bg-[#12151e] p-3"><div class="flex items-center gap-2"><i data-lucide="package" class="w-4 h-4 text-amber-300"></i><span class="text-xs text-main">ECR repos</span></div><span class="text-xs text-main font-medium">04</span></div></div></div>
+            <div class="rounded-xl border border-violet-400/15 bg-violet-500/[.06] p-3 flex gap-2.5"><i data-lucide="info" class="w-4 h-4 text-violet-300 shrink-0 mt-0.5"></i><p class="text-[10px] text-sub leading-5">This workspace uses sample data. No cloud account or live pipeline is connected.</p></div>
+          </div>
+        </aside>
+      </div>
+    </main>
+  </div>
+
+  <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 hidden px-4 py-2.5 rounded-xl bg-slate-800 text-white border border-white/10 shadow-xl text-xs"></div>
+
+  <script>
+    const $ = (selector, root = document) => root.querySelector(selector);
+    const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+    const shell = $('#appShell');
+    const sidebar = $('#sidebar');
+    const contextPanel = $('#contextPanel');
+    const landing = $('#chatLanding');
+    const conversation = $('#chatConversation');
+    const genericPage = $('#genericPage');
+    const messages = $('#messages');
+    let activePage = 'Chat';
+    let collapsed = false;
+    let attachedFile = '';
+    let toastTimer;
+
+    function icons() {
+      if (window.lucide) lucide.createIcons();
+    }
+    function toast(message) {
+      const el = $('#toast');
+      el.textContent = message;
+      el.classList.remove('hidden');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.add('hidden'), 2300);
+    }
+    function setTheme(light) {
+      shell.classList.toggle('light-shell', light);
+      document.documentElement.classList.toggle('dark', !light);
+      document.body.classList.toggle('bg-canvas', !light);
+      document.body.classList.toggle('text-slate-100', !light);
+      $('#themeIcon').setAttribute('data-lucide', light ? 'moon' : 'sun');
+      localStorage.setItem('devops-agent-theme', light ? 'light' : 'dark');
+      icons();
+    }
+    setTheme(localStorage.getItem('devops-agent-theme') === 'light');
+    $('#themeToggle').addEventListener('click', () => setTheme(!shell.classList.contains('light-shell')));
+
+    function toggleSidebar() {
+      if (window.innerWidth < 1024) {
+        sidebar.classList.toggle('fixed');
+        sidebar.classList.toggle('inset-y-0');
+        sidebar.classList.toggle('left-0');
+        sidebar.classList.toggle('shadow-2xl');
+        $('#mobileBackdrop').classList.toggle('hidden');
+        return;
+      }
+      collapsed = !collapsed;
+      sidebar.classList.toggle('w-[258px]', !collapsed);
+      sidebar.classList.toggle('w-[76px]', collapsed);
+      $$('.sidebar-label').forEach(el => el.classList.toggle('hidden', collapsed));
+      $('#collapseSidebar').innerHTML = `<i data-lucide="${collapsed ? 'panel-left-open' : 'panel-left-close'}" class="w-4 h-4"></i>`;
+      sidebar.querySelector('.h-\\[72px\\]').classList.toggle('px-5', !collapsed);
+      sidebar.querySelector('.h-\\[72px\\]').classList.toggle('px-4', collapsed);
+      icons();
+    }
+    $('#collapseSidebar').addEventListener('click', toggleSidebar);
+    $('#mobileOpen').addEventListener('click', () => {
+      sidebar.classList.add('fixed', 'inset-y-0', 'left-0', 'shadow-2xl');
+      $('#mobileBackdrop').classList.remove('hidden');
+    });
+    $('#mobileClose').addEventListener('click', closeMobileSidebar);
+    $('#mobileBackdrop').addEventListener('click', closeMobileSidebar);
+    function closeMobileSidebar() {
+      sidebar.classList.remove('fixed', 'inset-y-0', 'left-0', 'shadow-2xl');
+      $('#mobileBackdrop').classList.add('hidden');
+    }
+
+    $('#contextToggle').addEventListener('click', () => {
+      contextPanel.classList.toggle('hidden');
+      contextPanel.classList.toggle('xl:block');
+    });
+    $('#contextClose').addEventListener('click', () => {
+      contextPanel.classList.add('hidden');
+      contextPanel.classList.remove('xl:block');
+    });
+
+    $('#attachButton').addEventListener('click', () => $('#fileInput').click());
+    $('#fileInput').addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      attachedFile = file.name;
+      $('#attachmentName').textContent = file.name;
+      $('#attachmentName').classList.remove('hidden');
+      toast('Attached for preview: ' + file.name);
+    });
+    $('#modelButton').addEventListener('click', () => toast('DevOps Copilot · Demo model'));
+    $('#environmentButton').addEventListener('click', () => {
+      const options = ['Development', 'Staging', 'Production'];
+      const current = $('#environmentLabel').textContent;
+      $('#environmentLabel').textContent = options[(options.indexOf(current) + 1) % options.length];
+      toast('Environment preview: ' + $('#environmentLabel').textContent);
+    });
+    $('#searchButton').addEventListener('click', () => {
+      const input = $('#tableSearch');
+      if (activePage !== 'Chat') {
+        input?.focus();
+      } else {
+        const query = prompt('Search conversations (demo):');
+        if (query) {
+          const found = $$('.history-item').filter(el => el.textContent.toLowerCase().includes(query.toLowerCase()));
+          toast(found.length ? `${found.length} matching conversation(s)` : 'No matching conversations');
+        }
+      }
+    });
+    $('#profileMenu').addEventListener('click', () => toast('Profile menu is a visual demo.'));
+    $('#genericAction').addEventListener('click', () => toast('This action is a frontend demo only.'));
+    $('#filterButton').addEventListener('click', () => toast('Filters are represented in this UI preview.'));
+
+    const pageData = {
+      Projects: {
+        subtitle: 'Explore repositories and engineering projects.',
+        stats: [['Total projects','04','folder-kanban'],['Active builds','03','activity'],['Repositories','06','git-branch'],['Environments','03','layers']],
+        headers: ['Project','Repository','Branch','Last activity','Status'],
+        rows: [
+          ['shopping-cart-api','acme/shopping-cart-api','main','8 min ago','Active'],
+          ['web-storefront','acme/web-storefront','develop','22 min ago','Active'],
+          ['infra-platform','acme/infra-platform','main','1 hour ago','Review'],
+          ['customer-notifications','acme/customer-notifications','release/v2','Yesterday','Paused']
+        ]
+      },
+      Pipelines: {
+        subtitle: 'Inspect CI/CD runs and delivery stages.',
+        stats: [['Total pipelines','08','git-branch'],['Successful','07','check-circle-2'],['Running','01','loader-circle'],['Failed today','00','circle-x']],
+        headers: ['Pipeline','Project','Last run','Duration','Status'],
+        rows: [
+          ['api-production-deploy','shopping-cart-api','8 min ago','4m 34s','Success'],
+          ['frontend-ci','web-storefront','22 min ago','2m 18s','Success'],
+          ['infra-plan','infra-platform','35 min ago','1m 02s','Running'],
+          ['notify-service-build','customer-notifications','Yesterday','3m 41s','Review']
+        ]
+      },
+      Infrastructure: {
+        subtitle: 'Review a sample inventory of cloud resources.',
+        stats: [['EC2 instances','06','server'],['EKS clusters','02','boxes'],['S3 buckets','08','database'],['ECR repos','04','package']],
+        headers: ['Resource','Type','Region','Environment','Status'],
+        rows: [
+          ['api-prod-01','EC2 instance','ap-south-1','Production','Running'],
+          ['platform-cluster','EKS cluster','ap-south-1','Production','Healthy'],
+          ['app-artifacts-demo','S3 bucket','ap-south-1','Shared','Available'],
+          ['web-app-images','ECR repository','ap-south-1','Development','Available']
+        ]
+      },
+      Kubernetes: {
+        subtitle: 'Inspect sample clusters, workloads, and pod health.',
+        stats: [['Clusters','02','boxes'],['Deployments','12','layers'],['Running pods','28','check-circle-2'],['Attention needed','01','alert-triangle']],
+        headers: ['Workload','Namespace','Ready','Restarts','Status'],
+        rows: [
+          ['frontend-deployment','production','3 / 3','0','Running'],
+          ['backend-deployment','production','3 / 3','0','Running'],
+          ['mongo-deployment','data','1 / 1','0','Running'],
+          ['worker-deployment','staging','0 / 2','5','Attention']
+        ]
+      },
+      Containers: {
+        subtitle: 'Review sample images, container status, and build metadata.',
+        stats: [['Images','14','container'],['Running','09','play-circle'],['Scans passed','12','shield-check'],['Needs review','02','alert-circle']],
+        headers: ['Image','Tag','Size','Last scan','Status'],
+        rows: [
+          ['web-app','v1.8.2','184 MB','Today, 09:42','Passed'],
+          ['api-service','v2.4.0','226 MB','Today, 09:20','Passed'],
+          ['worker','latest','312 MB','Yesterday','Review'],
+          ['nginx-proxy','1.27-alpine','42 MB','Yesterday','Passed']
+        ]
+      },
+      Monitoring: {
+        subtitle: 'View illustrative service health and alert activity.',
+        stats: [['Services healthy','11 / 12','activity'],['CPU average','34%','cpu'],['Memory average','61%','gauge'],['Open alerts','03','bell-ring']],
+        headers: ['Service','Availability','CPU','Memory','Status'],
+        rows: [
+          ['API Gateway','99.98%','28%','54%','Healthy'],
+          ['Web Frontend','99.99%','19%','42%','Healthy'],
+          ['Background Worker','99.80%','71%','78%','Review'],
+          ['Notification Service','99.96%','34%','58%','Healthy']
+        ]
+      },
+      Security: {
+        subtitle: 'Review illustrative security findings and scan statuses.',
+        stats: [['Critical','00','shield-alert'],['High','02','alert-triangle'],['Medium','05','alert-circle'],['Scans completed','12','shield-check']],
+        headers: ['Finding','Category','Resource','Detected','Severity'],
+        rows: [
+          ['Outdated base image','Container scan','worker:latest','Today','High'],
+          ['Broad IAM permission','Configuration','demo-role','Today','High'],
+          ['Missing resource tag','Cloud config','api-prod-01','Yesterday','Medium'],
+          ['Dependency update','SCA','web-app:v1.8.2','Yesterday','Medium']
+        ]
+      },
+      Settings: {
+        subtitle: 'Customize the appearance and demo preferences.',
+        stats: [['Theme','Adaptive','sun-moon'],['AI provider','Demo mode','sparkles'],['Cloud provider','AWS preview','cloud'],['Workspace','Personal','user-round']],
+        headers: ['Preference','Current value','Description','Action','Status'],
+        rows: [
+          ['Appearance','Dark / Light','Switch using the top-right theme button','Theme toggle','Enabled'],
+          ['Environment','Development','Preview environment selector','Change in top bar','Enabled'],
+          ['AI responses','Simulated','No external API connection','Demo only','Enabled'],
+          ['Cloud integration','Disconnected','No live resources queried','Not connected','Safe']
+        ]
+      }
+    };
+    const statusClass = status => {
+      if (['Success','Healthy','Running','Passed','Active','Available','Enabled','Safe'].includes(status)) return 'status-good';
+      if (['Review','Attention','High','Paused'].includes(status)) return 'status-warn';
+      if (['Failed','Critical'].includes(status)) return 'status-fail';
+      return 'status-running';
+    };
+    function renderGenericPage(page) {
+      const data = pageData[page] || pageData.Projects;
+      $('#genericTitle').textContent = page;
+      $('#genericSubtitle').textContent = data.subtitle;
+      $('#tableHeading').textContent = page === 'Settings' ? 'Workspace preferences' : page + ' overview';
+      $('#genericAction').querySelector('span').textContent = page === 'Settings' ? 'Save preferences' : 'New ' + (page === 'Kubernetes' ? 'workload' : page === 'Infrastructure' ? 'resource' : page === 'Pipelines' ? 'pipeline' : page === 'Security' ? 'scan' : page === 'Monitoring' ? 'alert' : page === 'Containers' ? 'image' : 'project');
+      $('#genericStats').innerHTML = data.stats.map(([label,value,icon]) => `<div class="surface rounded-xl border border-line bg-[#11141b]/80 p-4"><div class="flex items-center justify-between"><span class="text-sub text-xs">${label}</span><i data-lucide="${icon}" class="w-4 h-4 text-violet-300"></i></div><p class="text-main text-2xl font-semibold mt-3">${value}</p><p class="text-sub text-[10px] mt-1">Sample overview</p></div>`).join('');
+      $('#genericHead').innerHTML = `<tr>${data.headers.map(h => `<th class="px-5 py-3 font-medium">${h}</th>`).join('')}</tr>`;
+      $('#genericBody').innerHTML = data.rows.map(row => `<tr class="hover:bg-white/[.025] transition">${row.map((cell,i) => {
+        const isStatus = i === row.length - 1;
+        return `<td class="px-5 py-4 text-xs ${i === 0 ? 'text-main font-medium' : 'text-sub'}">${isStatus ? `<span class="${statusClass(cell)} inline-flex items-center rounded-md border border-line px-2 py-1 text-[10px]">${cell}</span>` : cell}</td>`;
+      }).join('')}</tr>`).join('');
+      $('#tableCount').textContent = `Showing ${data.rows.length} sample records`;
+      $('#tableSearch').value = '';
+      $('#tableSearch').oninput = () => {
+        const q = $('#tableSearch').value.toLowerCase();
+        let visible = 0;
+        $$('#genericBody tr').forEach(tr => {
+          const show = tr.textContent.toLowerCase().includes(q);
+          tr.classList.toggle('hidden', !show);
+          if (show) visible++;
+        });
+        $('#tableEmpty').classList.toggle('hidden', visible !== 0);
+        $('#tableCount').textContent = `Showing ${visible} of ${data.rows.length} records`;
+      };
+      icons();
+    }
+    function showPage(page) {
+      activePage = page;
+      $$('.nav-item[data-page]').forEach(btn => btn.classList.toggle('active', btn.dataset.page === page));
+      $('#pageTitle').textContent = page === 'Chat' ? 'AI Assistant' : page;
+      landing.classList.toggle('hidden', page !== 'Chat' || messages.children.length > 0);
+      conversation.classList.toggle('hidden', page !== 'Chat' || messages.children.length === 0);
+      genericPage.classList.toggle('hidden', page === 'Chat');
+      if (page !== 'Chat') renderGenericPage(page);
+      closeMobileSidebar();
+      $('#workspace').scrollTop = 0;
+    }
+    $$('.nav-item[data-page]').forEach(btn => btn.addEventListener('click', () => showPage(btn.dataset.page)));
+
+    function escapeHTML(str) {
+      return str.replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    }
+    function addMessage(role, text) {
+      const article = document.createElement('article');
+      article.className = 'message flex gap-3 sm:gap-4 ' + (role === 'user' ? 'justify-end' : '');
+      if (role === 'assistant') {
+        article.innerHTML = `<div class="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-cyan-400 flex items-center justify-center shrink-0"><i data-lucide="workflow" class="w-4 h-4 text-white"></i></div><div class="min-w-0 max-w-[90%]"><div class="text-[11px] text-violet-300 font-semibold mb-2">DevOps Agent <span class="text-slate-600 font-normal ml-2">Demo response</span></div><div class="assistant-bubble border border-line rounded-2xl rounded-tl-md bg-[#12151e] px-4 py-3 text-sm leading-7 text-slate-200">${formatAssistant(text)}</div><div class="flex items-center gap-3 mt-2 text-slate-500"><button class="copy-message text-[10px] hover:text-main flex items-center gap-1"><i data-lucide="copy" class="w-3 h-3"></i> Copy</button><span class="text-[10px]">Illustrative guidance</span></div></div>`;
+      } else {
+        article.innerHTML = `<div class="user-bubble max-w-[85%] rounded-2xl rounded-tr-md bg-violet-500/15 border border-violet-400/10 px-4 py-3 text-sm leading-6 text-violet-50">${escapeHTML(text)}${attachedFile ? `<div class="mt-2 pt-2 border-t border-violet-300/15 text-[10px] text-violet-200 flex items-center gap-1.5"><i data-lucide="paperclip" class="w-3 h-3"></i>${escapeHTML(attachedFile)} (selected locally)</div>` : ''}</div><div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-fuchsia-500 flex items-center justify-center shrink-0 text-[10px] font-bold text-white">DE</div>`;
+      }
+      messages.appendChild(article);
+      const copyBtn = $('.copy-message', article);
+      if (copyBtn) copyBtn.addEventListener('click', () => navigator.clipboard?.writeText(text).then(() => toast('Response copied')).catch(() => toast('Copy is not available in this browser context')));
+      icons();
+      $('#workspace').scrollTo({ top: $('#workspace').scrollHeight, behavior: 'smooth' });
+      return article;
+    }
+    function formatAssistant(text) {
+      return escapeHTML(text).replace(/`([^`]+)`/g, '<code class="code-bg bg-black/30 px-1.5 py-0.5 rounded text-violet-200 text-[12px] font-mono">$1</code>').replace(/\n/g, '<br>');
+    }
+    function mockResponse(promptText) {
+      const p = promptText.toLowerCase();
+      if (p.includes('kubernetes') || p.includes('pod') || p.includes('crashloop')) return `A good first-pass Kubernetes investigation is to check the pod state, recent events, and container logs. These commands are examples only; they have not been run against a cluster.\\n\\n1. Inspect the pod: \\`kubectl get pods -n <namespace>\\`\\n2. Review events: \\`kubectl describe pod <pod-name> -n <namespace>\\`\\n3. Read the previous container logs: \\`kubectl logs <pod-name> -n <namespace> --previous\\`\\n\\nCommon causes include a failing startup command, missing configuration or secrets, failed health checks, and insufficient memory. Verify the cause before changing a deployment.`;
+      if (p.includes('terraform') || p.includes('aws') || p.includes('infrastructure') || p.includes('cloud')) return `Here is a safe review checklist for your infrastructure configuration. No AWS account or Terraform files are connected in this demo.\\n\\n1. Check the plan before applying: \\`terraform fmt -check\\` and \\`terraform validate\\`.\\n2. Inspect proposed changes with \\`terraform plan\\`.\\n3. Confirm IAM permissions follow least privilege.\\n4. Verify state storage, encryption, versioning, and locking.\\n5. Review network exposure, security groups, tagging, and cost impact.\\n\\nFor a precise review, share the relevant configuration with secrets removed. Never paste access keys or credentials.`;
+      if (p.includes('docker') || p.includes('container') || p.includes('dockerfile')) return `For a Dockerfile review, start with these practical improvements. This is general guidance, not a scan of an actual image.\\n\\n- Prefer a small, trusted base image and pin versions where appropriate.\\n- Use multi-stage builds to keep build tools out of the runtime image.\\n- Copy dependency manifests first to improve layer caching.\\n- Run as a non-root user when possible.\\n- Add a suitable .dockerignore file and avoid copying secrets into the image.\\n- Scan the resulting image and review the findings before release.\\n\\nShare your Dockerfile (with secrets removed) for a more specific walkthrough.`;
+      if (p.includes('pipeline') || p.includes('ci/cd') || p.includes('github actions') || p.includes('build')) return `Let's troubleshoot the pipeline methodically. The status below is not connected to a real CI/CD system.\\n\\n1. Identify the first failed stage: source, build, test, scan, or deploy.\\n2. Read the earliest meaningful error in the job logs, not only the final failure line.\\n3. Check recent commits, dependency changes, environment variables, and permissions.\\n4. Verify artifact names, image tags, and deployment targets between stages.\\n5. Re-run only after addressing the root cause, then confirm the deployed version.\\n\\nA useful next step is to paste the failing log excerpt with tokens, URLs containing credentials, and other secrets removed.`;
+      return `I can help you reason through this DevOps task. Since this is a frontend-only demo, I cannot inspect your real repository, execute commands, query cloud resources, or trigger deployments.\\n\\nA practical workflow is:\\n1. Define the expected result and the current failure.\\n2. Gather the relevant configuration and sanitized logs.\\n3. Identify the smallest test that can confirm the suspected cause.\\n4. Review the proposed change before applying it.\\n5. Validate the result and document a rollback path.\\n\\nShare the relevant error message or configuration (with secrets removed), and I can help outline the next steps.`;
+    }
+    function sendPrompt(text, fromLanding = false) {
+      const trimmed = text.trim();
+      if (!trimmed) { toast('Enter a prompt first.'); return; }
+      landing.classList.add('hidden');
+      genericPage.classList.add('hidden');
+      conversation.classList.remove('hidden');
+      activePage = 'Chat';
+      $$('.nav-item[data-page]').forEach(btn => btn.classList.toggle('active', btn.dataset.page === 'Chat'));
+      $('#pageTitle').textContent = 'AI Assistant';
+      addMessage('user', trimmed);
+      if (fromLanding) $('#promptInput').value = '';
+      else $('#conversationInput').value = '';
+      const responseBox = document.createElement('article');
+      responseBox.className = 'message flex gap-3 sm:gap-4';
+      responseBox.innerHTML = `<div class="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-cyan-400 flex items-center justify-center shrink-0"><i data-lucide="workflow" class="w-4 h-4 text-white"></i></div><div><div class="text-[11px] text-violet-300 font-semibold mb-2">DevOps Agent</div><div class="assistant-bubble border border-line rounded-2xl rounded-tl-md bg-[#12151e] px-4 py-3 text-sm text-sub"><span class="inline-flex gap-1"><span class="dot">●</span><span class="dot">●</span><span class="dot">●</span></span><span class="ml-2">Thinking through your request...</span></div></div>`;
+      messages.appendChild(responseBox);
+      icons();
+      $('#workspace').scrollTo({ top: $('#workspace').scrollHeight, behavior: 'smooth' });
+      setTimeout(() => {
+        responseBox.remove();
+        addMessage('assistant', mockResponse(trimmed));
+      }, 850);
+      attachedFile = '';
+      $('#attachmentName').classList.add('hidden');
+      $('#fileInput').value = '';
+    }
+    $('#promptForm').addEventListener('submit', e => { e.preventDefault(); sendPrompt($('#promptInput').value, true); });
+    $('#conversationForm').addEventListener('submit', e => { e.preventDefault(); sendPrompt($('#conversationInput').value); });
+    [$('#promptInput'), $('#conversationInput')].forEach(input => input.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); input.form.requestSubmit(); }
+    }));
+    $$('.suggestion').forEach(card => card.addEventListener('click', () => {
+      $('#promptInput').value = card.dataset.prompt;
+      $('#promptInput').focus();
+      $('#promptInput').style.height = 'auto';
+      $('#promptInput').style.height = $('#promptInput').scrollHeight + 'px';
+    }));
+    $$('.history-item').forEach(item => item.addEventListener('click', () => {
+      showPage('Chat');
+      messages.innerHTML = '';
+      sendPrompt(item.dataset.prompt);
+    }));
+    $('#newChat').addEventListener('click', () => {
+      messages.innerHTML = '';
+      $('#promptInput').value = '';
+      $('#conversationInput').value = '';
+      showPage('Chat');
+      landing.classList.remove('hidden');
+      conversation.classList.add('hidden');
+      toast('New conversation started');
+    });
+    document.addEventListener('keydown', e => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); $('#newChat').click(); }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') { e.preventDefault(); $('#searchButton').click(); }
+      if (e.key === 'Escape') closeMobileSidebar();
+    });
+    window.addEventListener('resize', () => {
+      if (window.innerWidth >= 1024) closeMobileSidebar();
+    });
+    icons();
+  </script>
+</body>
+</html>
